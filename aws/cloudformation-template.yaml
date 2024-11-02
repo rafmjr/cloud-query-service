@@ -1,0 +1,46 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Resources:
+  MyS3Bucket:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      BucketName: 'cqs-output-bucket'
+
+  LambdaExecutionRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: 'Allow'
+            Principal:
+              Service: 'lambda.amazonaws.com'
+            Action: 'sts:AssumeRole'
+      Policies:
+        - PolicyName: 'LambdaExecutionPolicy'
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action:
+                  - 'logs:*'
+                  - 's3:*'
+                  - 'secretsmanager:GetSecretValue'
+                  - 'ses:SendEmail'
+                Resource: '*'
+
+  MyLambdaFunction:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      FunctionName: 'CQSQueryExecutor'
+      Handler: 'index.handler'
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        S3Bucket: 'cqs-code-bucket'
+        S3Key: 'cqs-code-key.zip'
+      Runtime: 'nodejs18.x'
+      Timeout: 900 # 15 minutes
+      Environment:
+        Variables:
+          S3_BUCKET: 'cqs-output-bucket'
+          SES_EMAIL: 'rafael.mejia@tracktik.com'
+          DATABASE_SECRET_NAME: 'CQS/QA/Database'
